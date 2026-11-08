@@ -1,0 +1,103 @@
+spring:
+  application:
+    name: spring-ai
+
+  # ============================================================================
+  # Ollama 연결 설정
+  # ----------------------------------------------------------------------------
+  # spring-ai-starter-model-ollama 스타터가 아래 값을 읽어서 OllamaApi(HTTP 클라이언트)와
+  # OllamaChatModel 빈을 자동으로 만들어 줍니다.
+  # OllamaChatModel 은 내부적으로 Ollama 의 채팅 엔드포인트 "POST {base-url}/api/chat" 을 호출합니다.
+  # ============================================================================
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        # 사용할 모델 이름 (`ollama list` 로 확인 가능). 도구 호출(Tool Calling)을 지원하는 모델이어야 합니다.
+        # 실측 결과(셸 도구 추가 전 도구 12개 + 한국어 시스템 프롬프트, 질문 5개 x 3회 - docs/02-setup-and-run.md 참고):
+        #   qwen3:8b (think=false) 15/15, 평균 1.4초  ← 채택
+        #   qwen3-coder:30b         6/15  (여는 <tool_call> 태그 누락)
+        #   qwen2.5-coder:7b        0/15  (도구 호출을 텍스트로 출력)
+        # 참고: Spring AI 2.x 부터는 spring.ai.ollama.chat.options.model 대신 spring.ai.ollama.chat.model 을 사용합니다.
+        model: qwen3:8b
+
+        # 생각(thinking) 모드: qwen3 는 답하기 전에 내부적으로 추론 과정을 생성하는 기능이 있습니다.
+        # 켜면(true) 응답이 약 6배 느려지는데(8.9초 vs 1.4초), 이 프로젝트의 도구 선택 정확도는 같았으므로 끕니다.
+        # 값: true / false / high / medium / low
+        think: false
+
+        # temperature: 0에 가까울수록 일관된(덜 창의적인) 답변. 도구를 정확히 고르는 게 중요하므로 낮게 둡니다.
+        temperature: 0.2
+      init:
+        # 모델이 없을 때 자동으로 pull 할지 여부. 학습용이므로 꺼 두고, 필요하면 `ollama pull` 로 직접 받습니다.
+        pull-model-strategy: never
+
+  # 로컬 LLM 은 첫 응답(모델 로딩)이 느릴 수 있으므로 HTTP 읽기 타임아웃을 넉넉히 줍니다.
+  http:
+    clients:
+      read-timeout: 5m
+
+# ============================================================================
+# 에이전트 설정 (우리가 직접 정의한 값 - AgentProperties 클래스에 바인딩됩니다)
+# ============================================================================
+agent:
+  # 파일 도구(FileTools)가 접근할 수 있는 유일한 폴더이자, 셸 도구(ShellTools)의 실행 위치.
+  # OS 샌드박스는 이 폴더 안에만 쓰기를 허용합니다.
+  workspace-dir: ./workspace
+  # 대화 기억(ChatMemory)에 유지할 최근 메시지 개수
+  # 도구를 쓰는 한 턴은 user + assistant(tool_calls) + tool(결과) + assistant(최종답변) = 4개를 차지합니다.
+  memory-max-messages: 40
+  # 작업 환경 안내 파일 (workspace 기준). 시작 시 읽어 시스템 프롬프트에 덧붙입니다. (Claude Code 의 CLAUDE.md 역할)
+  # OS 샌드박스가 이 파일 쓰기를 막습니다.
+  guide-file: AGENTS.md
+  # true: 매 요청마다 user 메시지 앞에 [현재 시각: …] 을 붙입니다 (CurrentTimeAdvisor, docs/08 참고)
+  #       "오늘 무슨 요일이야?" 같은 질문을 도구 없이 LLM 호출 1번으로 답합니다. (정밀도는 분 단위)
+  #       false 로 바꾸면 모델이 날짜/시간 도구를 불러 시각을 알아냅니다.
+  inject-current-time: true
+
+  # 셸 도구(ShellTools) 보안 정책 - docs/07-shell-tool-security.md 참고
+  # 판정 순서: 거부(denied) → 허용(allowed) → 그 외는 사람 승인(ask)
+  #   콘솔 모드(cli): 터미널에서 y/N 으로 승인 / REST 모드: 물어볼 사람이 없으므로 자동 거부
+  shell:
+    # 승인 없이 바로 실행 (읽기 전용 명령 위주)
+    allowed-commands: [ls, cat, head, tail, wc, grep, date, echo, pwd]
+    # 프로그램별 허용 서브커맨드. 여기 없는 서브커맨드(git push, git reset 등)는 승인 필요
+    allowed-subcommands:
+      git: [status, log, diff, branch]
+    # 승인과 관계없이 항상 거부
+    #   bash/sh/zsh 를 막는 이유: "bash -c '...'" 로 셸을 통째로 우회할 수 있기 때문
+    denied-commands: [rm, sudo, bash, sh, zsh, curl, wget]
+    # 어떤 명령이든 이 인자가 있으면 거부 (find -exec 처럼 다른 명령을 실행하는 인자)
+    denied-arguments: [-exec, -execdir, -delete]
+    # 실행 파일을 찾는 폴더. 이 안의 프로그램만 실행됩니다.
+    search-paths: [/usr/bin, /bin, /usr/local/bin, /opt/homebrew/bin]
+    # 최대 실행 시간. 넘으면 자식 프로세스까지 강제 종료
+    timeout: 10s
+    # 모델에게 돌려줄 출력 최대 글자 수
+    max-output-chars: 4000
+    # OS 샌드박스: 실행된 프로세스를 커널 수준에서 제한 (정책을 우회한 명령도 벗어날 수 없음)
+    sandbox:
+      # auto: macOS 면 Seatbelt(sandbox-exec), 아니면 샌드박스 없이 실행 / seatbelt: 필수(없으면 시작 실패) / none: 끔
+      type: auto
+      # false: 모든 네트워크 연결 차단 (localhost 포함)
+      allow-network: false
+      # 읽기까지 막을 민감한 경로 (쓰기는 workspace 외 전부 차단됨)
+      denied-read-paths: [~/.ssh, ~/.aws, ~/.gnupg, ~/.config, ~/.docker, ~/.kube, ~/.netrc, ~/Library/Keychains]
+
+# ============================================================================
+# 로깅: 에이전트가 어떻게 동작하는지 눈으로 확인하기 위한 설정
+# ============================================================================
+logging:
+  level:
+    # SimpleLoggerAdvisor 가 LLM 으로 가는 요청/응답 전체를 DEBUG 레벨로 출력합니다.
+    org.springframework.ai.chat.client.advisor: DEBUG
+    # 우리 코드의 로그. "[Tool] ..."(도구 실행), "[Metrics] ..."(시간·토큰), "[Guard] ..."(가드레일 차단) 은
+    # INFO/WARN 레벨이라 항상 보입니다. DEBUG 로 두면 "[Agent] ..."(사용자 메시지/최종 답변)도 보입니다.
+    com.example.springai: DEBUG
+    # Spring AI 가 도구를 실제로 실행할 때 남기는 로그: "Executing tool call: multiply"
+    # 우리 코드의 [Tool] 로그와 별개로, 프레임워크 쪽에서 도구 실행 여부를 확인할 수 있는 두 번째 증거입니다.
+    org.springframework.ai.model.tool: DEBUG
+    # Spring AI 의 Ollama 모듈이 함께 가져오는 Netty 가 macOS 에서 "DNS native 라이브러리 로드 실패" ERROR 로그를 남깁니다.
+    # 시스템 기본 DNS 로 자동 대체되어 동작에는 문제가 없으므로 해당 로그만 끕니다.
+    # 주의: YAML 에서 따옴표 없는 OFF 는 불리언 false 로 해석되므로 "OFF" 처럼 따옴표로 감쌉니다.
+    io.netty.resolver.dns.DnsServerAddressStreamProviders: "OFF"
