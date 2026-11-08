@@ -55,6 +55,11 @@ agent:
   #       false 로 바꾸면 모델이 날짜/시간 도구를 불러 시각을 알아냅니다.
   inject-current-time: true
 
+  # 콘솔 모드(cli)에서 쓸 사용자 ID. 할 일 목록과 대화 기록이 사용자별로 나뉩니다. (docs/09 참고)
+  # REST 모드는 이 값 대신 요청마다 X-User-Id 헤더로 받습니다.
+  # 사용자 ID 는 ToolContext 로 도구에만 전달되고 LLM 에는 보내지 않습니다.
+  cli-user-id: cli-user
+
   # 셸 도구(ShellTools) 보안 정책 - docs/07-shell-tool-security.md 참고
   # 판정 순서: 거부(denied) → 허용(allowed) → 그 외는 사람 승인(ask)
   #   콘솔 모드(cli): 터미널에서 y/N 으로 승인 / REST 모드: 물어볼 사람이 없으므로 자동 거부

@@ -7,7 +7,7 @@
 | `DateTimeTools` | `getCurrentDateTime(timeZone?)` | 현재 날짜/시간 | 가장 단순한 @Tool, 선택 인자(`required = false`) |
 | | `convertTimeZone(dateTime, from, to)` | 타임존 변환 | 오류를 문자열로 돌려주기 |
 | `CalculatorTools` | `add`, `subtract`, `multiply`, `divide`, `power` | 사칙연산 | LLM 의 약점(계산)을 도구로 보완, BigDecimal |
-| `TodoTools` | `addTodo(title)` | 할 일 추가 | **상태를 바꾸는** 도구 |
+| `TodoTools` | `addTodo(title)` | 할 일 추가 | **상태를 바꾸는** 도구, 사용자 ID 는 `ToolContext` 로 받음 ([09장](09-user-context.md)) |
 | | `listTodos(includeDone?)` | 목록 조회 | 객체(List) 반환 → 자동 JSON 변환 |
 | | `completeTodo(id)` | 완료 처리 | 숫자 인자 |
 | `FileTools` | `listFiles(directory?)` | 폴더 목록 | |
@@ -69,7 +69,7 @@ fun agentChatClient(
 ### 4단계: 확인
 ```bash
 ./gradlew bootRun
-curl -s -X POST localhost:8080/api/agent/chat -H 'Content-Type: application/json' \
+curl -s -X POST localhost:8080/api/agent/chat -H 'Content-Type: application/json' -H 'X-User-Id: alice' \
   -d '{"message":"주사위 굴려줘"}'
 ```
 로그에서 도구 실행 여부를 확인하세요.

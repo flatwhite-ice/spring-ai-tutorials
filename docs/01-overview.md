@@ -51,7 +51,8 @@ src/main/kotlin/com/example/springai/
 │   ├── MetricsAdvisor.kt       # 소요 시간·토큰 측정
 │   └── CurrentTimeAdvisor.kt   # 현재 시각 주입
 ├── agent/
-│   └── AgentService.kt         # ★ 에이전트 호출 (chatClient.prompt()...call())
+│   ├── AgentService.kt         # ★ 에이전트 호출 (chatClient.prompt()...call())
+│   └── UserContext.kt      # 사용자 ID 를 ToolContext 로 전달 (docs/09)
 ├── tools/                      # ★ @Tool 도구들
 │   ├── DateTimeTools.kt
 │   ├── CalculatorTools.kt

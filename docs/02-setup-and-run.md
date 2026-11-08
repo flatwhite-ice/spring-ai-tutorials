@@ -50,24 +50,32 @@ spring:
 ./gradlew bootRun
 ```
 
+모든 요청에 사용자 ID 헤더(`X-User-Id`)가 필요합니다. 없으면 400 으로 응답합니다.
+할 일 목록과 대화 기록이 사용자별로 나뉩니다. (학습용 단순화. 실제 서비스는 인증 정보에서 꺼냄 → [09장](09-user-context.md))
+
 ```bash
 # 새 대화 시작 (conversationId 생략 → 서버가 발급)
 curl -s -X POST localhost:8080/api/agent/chat \
-  -H 'Content-Type: application/json' \
+  -H 'Content-Type: application/json' -H 'X-User-Id: alice' \
   -d '{"message":"지금 서울은 몇 시야?"}'
 # → {"conversationId":"7f3c...","answer":"지금 서울은 20:55입니다."}
 
 # 같은 대화 이어가기 (conversationId 재사용 → 이전 대화를 기억)
 curl -s -X POST localhost:8080/api/agent/chat \
-  -H 'Content-Type: application/json' \
+  -H 'Content-Type: application/json' -H 'X-User-Id: alice' \
   -d '{"conversationId":"demo-1","message":"우유 사기를 할 일에 추가해줘"}'
 
 curl -s -X POST localhost:8080/api/agent/chat \
-  -H 'Content-Type: application/json' \
+  -H 'Content-Type: application/json' -H 'X-User-Id: alice' \
   -d '{"conversationId":"demo-1","message":"할 일 목록 보여줘"}'
 
 # 대화 기억 삭제
-curl -s -X DELETE localhost:8080/api/agent/conversations/demo-1
+curl -s -X DELETE localhost:8080/api/agent/conversations/demo-1 -H 'X-User-Id: alice'
+
+# 다른 사용자(bob)은 alice 의 할 일이 보이지 않습니다
+curl -s -X POST localhost:8080/api/agent/chat \
+  -H 'Content-Type: application/json' -H 'X-User-Id: bob' \
+  -d '{"message":"할 일 목록 보여줘"}'
 ```
 
 ### 시도해볼 질문
@@ -87,10 +95,16 @@ curl -s -X DELETE localhost:8080/api/agent/conversations/demo-1
 ## 3-B. 콘솔(REPL) 모드로 실행
 ```bash
 ./gradlew bootRun --args='--spring.profiles.active=cli'
+
+# 다른 사용자로 실행 (기본값: cli-user)
+./gradlew bootRun --args='--spring.profiles.active=cli --agent.cli-user-id=bob'
 ```
+사용자 ID는 REST의 `X-User-Id` 헤더와 같은 역할입니다. 할 일 목록과 대화 기록이 사용자별로 나뉘고, 이 값은 `ToolContext`로 도구에만 전달되며 LLM에는 보내지 않습니다. 형식(영문·숫자·`-`·`_` 1~64자)이 틀리면 안내를 보여 주고 바로 종료합니다. → [09장](09-user-context.md)
+
 ```
 ==============================================
  Spring AI 에이전트 콘솔 (Ollama)
+  - 사용자: cli-user
   - 종료: exit   - 대화 초기화: /reset
 ==============================================
 

@@ -12,11 +12,13 @@ ollama pull qwen3:8b
 
 # 2-A. REST API 모드
 ./gradlew bootRun
-curl -s -X POST localhost:8080/api/agent/chat -H 'Content-Type: application/json' \
+curl -s -X POST localhost:8080/api/agent/chat -H 'Content-Type: application/json' -H 'X-User-Id: alice' \
   -d '{"message":"123.45 곱하기 678 은?"}'
 
-# 2-B. 콘솔 대화 모드
+# 2-B. 콘솔 대화 모드 (사용자 ID 기본값: cli-user)
 ./gradlew bootRun --args='--spring.profiles.active=cli'
+# 다른 사용자로 실행 (할 일 목록·대화 기록이 사용자별로 나뉨, docs/09)
+./gradlew bootRun --args='--spring.profiles.active=cli --agent.cli-user-id=bob'
 ```
 
 ## 문서
@@ -28,6 +30,7 @@ curl -s -X POST localhost:8080/api/agent/chat -H 'Content-Type: application/json
 6. [에이전트 내부 동작 원리](docs/06-agent-internals.md): 흐름 제어(LLM vs Advisor), 도구 인식 4단계
 7. [셸 명령 도구와 보안](docs/07-shell-tool-security.md): 허용/승인/거부 정책, 자연어 명령 추론(AGENTS.md), OS 샌드박스, 한계
 8. [어드바이저 직접 만들기](docs/08-custom-advisors.md): 측정·시각 주입·가드레일 예제, 체인 위치와 프롬프트 캐시
+9. [사용자 식별자 다루기](docs/09-user-context.md): ToolContext 로 사용자 ID 를 LLM 에 보내지 않고 도구에 전달하기
 
 ## 기술 스택
 Kotlin · Spring Boot 4.1 · Spring AI 2.0.2 · Ollama (`qwen3:8b`) · JDK 25

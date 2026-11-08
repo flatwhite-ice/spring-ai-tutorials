@@ -112,6 +112,8 @@ class CalculatorTools {
 - 모델은 코드가 아니라 `description` 만 보고 판단합니다 → 설명을 구체적으로 쓰세요.
 - 도구는 **우리 JVM 안에서** 실행됩니다. LLM 은 실행 요청만 할 뿐입니다.
 - 모델이 도구 호출을 지원해야 합니다. (`ollama show <모델>` → Capabilities 에 `tools`)
+- 도구 메서드에 `ToolContext` 매개변수를 두면 서버가 `.toolContext(map)` 으로 넣은 값(예: 사용자 ID)을 받습니다.
+  이 매개변수는 JSON 스키마에서 빠지므로 LLM 은 그 값을 보지도, 바꾸지도 못합니다. → [09장](09-user-context.md)
 
 > 도구가 등록·선택·실행되는 내부 과정과, 흐름을 누가 제어하는지는
 > [06. 에이전트 내부 동작 원리](06-agent-internals.md) 에서 자세히 다룹니다.

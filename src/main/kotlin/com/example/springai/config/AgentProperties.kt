@@ -14,7 +14,8 @@ import java.time.Duration
  * @property workspaceDir 파일 도구·셸 도구가 접근할 수 있는 샌드박스 폴더
  * @property memoryMaxMessages 대화 기억에 유지할 최근 메시지 수
  * @property guideFile 작업 환경 안내 파일 (workspace 기준 상대 경로). 시작 시 읽어 시스템 프롬프트에 덧붙임
- * @property injectCurrentTime true 면 CurrentTimeAdvisor 가 매 요청의 시스템 메시지에 현재 시각을 붙임
+ * @property injectCurrentTime true 면 CurrentTimeAdvisor 가 매 요청의 user 메시지 앞에 현재 시각을 붙임
+ * @property cliUserId 콘솔 모드(cli 프로파일)에서 쓸 사용자 ID. REST 는 요청마다 X-User-Id 헤더로 받음
  * @property shell 셸 도구(ShellTools) 보안 정책
  */
 @ConfigurationProperties(prefix = "agent")
@@ -23,6 +24,7 @@ data class AgentProperties(
     val memoryMaxMessages: Int = 40,
     val guideFile: String = "AGENTS.md",
     val injectCurrentTime: Boolean = true,
+    val cliUserId: String = "cli-user",
     val shell: ShellProperties = ShellProperties(),
 ) {
     /** 안내 파일의 경로 (workspace 기준) */
